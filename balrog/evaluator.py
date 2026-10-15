@@ -278,6 +278,7 @@ class Evaluator:
         episode_return = 0.0
 
         max_steps_per_episode = env.max_steps if self.max_steps_per_episode is None else self.max_steps_per_episode
+        agent.set_episode_context(max_steps_per_episode)
 
         # Create a unique CSV filename for this episode
         csv_filename = os.path.join(self.output_dir, self.env_name, task, f"{task}_run_{episode_idx:02d}.csv")
@@ -306,6 +307,7 @@ class Evaluator:
 
             action = None
             for step in range(max_steps_per_episode):
+                agent.set_step_context(step + 1)
                 response = agent.act(obs, prev_action=action)
                 action = env.check_action_validity(response.completion)
                 reasoning = response.reasoning if hasattr(response, "reasoning") else ""
