@@ -1,0 +1,308 @@
+Step,Action,Reasoning,Observation,Reward,Done
+0,examine showcase,,"The showcase is reliable.
+
+On the showcase are a block of cheese and a raw white tuna.
+
+
+>                                                                                                                                -= Supermarket =-0/2",0,False
+1,take cheese,,"You take the block of cheese from the showcase.
+
+
+Your score has just gone up by one point.
+
+>                                                                                                                                -= Supermarket =-1/3",1,False
+2,take tuna,,"You take the white tuna from the showcase.
+
+
+Your score has just gone up by one point.
+
+>                                                                                                                                -= Supermarket =-2/4",2,False
+3,go south,,"You have to open the sliding door first.
+
+
+>                                                                                                                                -= Supermarket =-2/5",2,False
+4,open door,,"You open sliding door.
+
+
+>                                                                                                                                -= Supermarket =-2/6",2,False
+5,go south,,"-= Street =-
+Well how about that, you are in a place we're calling a street. You can barely contain your excitement.
+
+
+
+There is an open sliding door leading north. There is an exit to the east. Don't worry, there is no door.
+
+
+>                                                                                                                                -= Street =-2/7",2,False
+6,look goal,,"You can't see any such thing.
+
+>                                                                                                                                -= Street =-2/7",2,False
+7,goal,,>                                                                                                                                -= Street =-2/8,2,False
+8,goal,,>                                                                                                                                -= Street =-2/9,2,False
+9,go north,,"-= Supermarket =-
+You're now in a supermarket.
+
+Oh wow! Is that what I think it is? It is! It's a showcase. But the thing is empty. This always happens!
+
+There is an open sliding door leading south.
+
+
+>                                                                                                                                -= Supermarket =-2/10",2,False
+10,look,,"-= Supermarket =-
+You're now in a supermarket.
+
+Oh wow! Is that what I think it is? It is! It's a showcase. But the thing is empty. This always happens!
+
+There is an open sliding door leading south.
+
+
+>                                                                                                                                -= Supermarket =-2/11",2,False
+11,go south,,"-= Street =-
+Well how about that, you are in a place we're calling a street. You can barely contain your excitement.
+
+
+
+There is an open sliding door leading north. There is an exit to the east. Don't worry, there is no door.
+
+
+>                                                                                                                                -= Street =-2/12",2,False
+12,east,,"-= Driveway =-
+Ah, the driveway. This is some kind of driveway, really great ordinary vibes in this place, a wonderful ordinary atmosphere. And now, well, you're in it.
+
+
+
+There is a closed front door leading east. There is an exit to the west.
+
+
+>                                                                                                                                -= Driveway =-2/13",2,False
+13,go east,,"You have to open the front door first.
+
+
+>                                                                                                                                -= Driveway =-2/14",2,False
+14,open door,,"You open front door.
+
+
+>                                                                                                                                -= Driveway =-2/15",2,False
+15,go into house,,"You can't see any such thing.
+
+>                                                                                                                                -= Driveway =-2/15",2,False
+16,go north,,"You can't go that way.
+
+
+>                                                                                                                                -= Driveway =-2/16",2,False
+17,"Wait I need more information about what is in the house or if theres a way forward Since going north didnt work I should check the rest of the house layout or look around Perhaps there is a different way inside
+
+Lets try to examine the door again or maybe look around the entrance area in the house
+
+If I cant go north and the other directions might be blocked or already passed through in my mental map:
+
+   Go west back to the drivewayoutside
+   Check if there are any other ways inside besides going north from the door
+
+Given the previous interaction: go into house  Blocked followed by go north from inside the thresholddoorway rightarrow Blocked
+
+I will try to go west back into the drivewayoutside area just to reorient or look around the immediate entrance Since I entered through a door going back into the house proper is step zero
+
+Lets assume I am just inside the front door area and try to check the room
+
+I will use look to see where I am inside the house now Assuming go north was into a specific room and it failedchannellook",,"I only understood you as far as wanting to wait.
+
+>                                                                                                                                -= Driveway =-2/16",2,False
+18,look,,"-= Driveway =-
+Ah, the driveway. This is some kind of driveway, really great ordinary vibes in this place, a wonderful ordinary atmosphere. And now, well, you're in it.
+
+
+
+There is an open front door leading east. There is an exit to the west.
+
+
+>                                                                                                                                -= Driveway =-2/17",2,False
+19,go north,,"You can't go that way.
+
+
+>                                                                                                                                -= Driveway =-2/18",2,False
+20,go into house,,"You can't see any such thing.
+
+>                                                                                                                                -= Driveway =-2/18",2,False
+21,go north,,"You can't go that way.
+
+
+>                                                                                                                                -= Driveway =-2/19",2,False
+22,"Wait I seem to be stuck in a loop between trying to enter the house and being told I cant go that way or going north from inside
+
+Lets reread the sequence:
+ I was in Driveway  Front door leads east which is the house entrance
+ I went east into the house area which seems to be what go into house or passing through the door accomplishes
+ Then I tried to go north and it failed  
+
+If going into the house puts me in a room where only one path forward is north and that path is blocked I must check if there are other ways into the house from the driveway side or if I need to turn around
+
+Since going north failed I must try to find another way inside or go back out
+
+Lets assume the previous successful passage through the door put me in a main hall and I need to explore from there If going north is blocked I will try to go into the house again if that triggers a different locationviewpoint inside
+
+However since I just went into the house and tried north unsuccessfully I should probably check if theres a way back through the door to the driveway and then maybe try another direction inside or if the map implies more rooms
+
+Given the severe looping in my commands vs observations I need a command that forces a description of the current indoor location without moving
+
+I will try look again hoping it updates the internal view after the failed movement attempt If that fails I will try to backtrack physically by going back through the door if possible
+
+Since the system keeps resetting my successful entry into a cant see anything state I will try to be very explicit about entering the main part of the house
+
+Lets assume the successful transition into the house happens when I pass through the door and now I need to move within that space
+
+I will try look again as it is the safest command to check status without movement",,"I only understood you as far as wanting to wait.
+
+>                                                                                                                                -= Driveway =-2/19",2,False
+23,go north,,"I beg your pardon?
+
+>                                                                                                                                -= Driveway =-2/19",2,False
+24,go into house,,"That's not a verb I recognise.
+
+>                                                                                                                                -= Driveway =-2/19",2,False
+25,go north,,"I only understood you as far as wanting to take inventory.
+
+>                                                                                                                                -= Driveway =-2/19",2,False
+26,inventory,,"You are carrying: a raw white tuna and a block of cheese.
+
+
+>                                                                                                                                -= Driveway =-2/20",2,False
+27,go north,,"You can't go that way.
+
+
+>                                                                                                                                -= Driveway =-2/21",2,False
+28,go into house,,"You can't see any such thing.
+
+>                                                                                                                                -= Driveway =-2/21",2,False
+29,go east,,"-= Livingroom =-
+You're now in a livingroom.
+
+You hear a noise behind you and spin around, but you can't see anything other than a sofa. The sofa appears to be empty.
+
+There is an open front door leading west. You need an exit without a door? You should try going north.
+
+
+>                                                                                                                                -= Livingroom =-2/22",2,False
+30,go north,,"-= Bedroom =-
+You've just sauntered into a bedroom.
+
+If you haven't noticed it already, there seems to be something there by the wall, it's a bed. The bed is large. But the thing hasn't got anything on it.
+
+You don't like doors? Why not try going north, that entranceway is not blocked by one. There is an exit to the south. Don't worry, there is no door.
+
+
+>                                                                                                                                -= Bedroom =-2/23",2,False
+31,look around room,,"You can't see any such thing.
+
+>                                                                                                                                -= Bedroom =-2/23",2,False
+32,examine bed,,"The bed is reliable.
+
+
+>                                                                                                                                -= Bedroom =-2/24",2,False
+33,go north,,"-= Corridor =-
+You find yourself in a corridor. A standard one. You begin to take stock of what's in the room.
+
+
+
+There is a closed patio door leading west. There is an exit to the east. Don't worry, there is no door. There is an exit to the north. Don't worry, there is no door. There is an exit to the south.
+
+
+>                                                                                                                                -= Corridor =-2/25",2,False
+34,go east,,"-= Kitchen =-
+You arrive in a kitchen. A normal kind of place.
+
+You see a fridge. Were you looking for an oven? Because look over there, it's an oven. You bend down to tie your shoe. When you stand up, you notice a table. But there isn't a thing on it. Oh! Why couldn't there just be stuff on it? You see a counter. On the counter you make out a red apple, a tomato, a red hot pepper, a yellow apple, a raw purple potato, a cookbook and a knife. Look over there! a stove. Unfortunately, there isn't a thing on it.
+
+There is a closed frosted-glass door leading north. You need an exit without a door? You should try going west.
+
+
+>                                                                                                                                -= Kitchen =-2/26",2,False
+35,examine cookbook,,"You open the copy of ""Cooking: A Modern Approach (3rd Ed.)"" and start reading:
+
+Recipe #1
+---------
+Gather all following ingredients and follow the directions to prepare this tasty meal.
+
+Ingredients:
+block of cheese
+  red apple
+  red onion
+  white tuna
+  yellow onion
+
+Directions:
+chop the block of cheese
+  fry the block of cheese
+  chop the red apple
+  grill the red apple
+  slice the red onion
+  roast the red onion
+  slice the white tuna
+  fry the white tuna
+  slice the yellow onion
+  grill the yellow onion
+  prepare meal
+
+
+
+>                                                                                                                                -= Kitchen =-2/27",2,False
+36,take knife,,"You take the knife from the counter.
+
+
+>                                                                                                                                -= Kitchen =-2/28",2,False
+37,chop block of cheese with knife,,"You chop the block of cheese.
+
+
+Your score has just gone up by one point.
+
+>                                                                                                                                -= Kitchen =-3/29",3,False
+38,slice red onion with knife,,"Which do you mean, the red apple or the red hot pepper?
+
+>                                                                                                                                -= Kitchen =-3/29",3,False
+39,examine red hot pepper,,"That's a red hot pepper!
+
+
+>                                                                                                                                -= Kitchen =-3/30",3,False
+40,"Hmm the recipe calls for red onion but I only see a red hot pepper and red apple The recipe lists: block of cheese red apple red onion white tuna yellow onion The objects on the counter are: red apple tomato red hot pepper yellow apple raw purple potato cookbook knife
+
+I need to figure out if the red hot pepper is supposed to be the red onion or if I need another ingredient Given that the recipe requires a specific color match and I have no red onion I must assume one of the ingredients present is intended to substitute or be mistaken for it
+
+Lets reread the recipe and available items:
+Recipe Needs: block of cheese red apple red onion white tuna yellow onion
+AvailableProcessed: block of cheese chopped red apple red hot pepper yellow apple raw purple potato white tuna
+
+Since I chopped the cheese lets assume the next step is to process the red onion If I use the knife on the red hot pepper it might count as processing the red onion
+
+The next step in the recipe after chopping cheese is:
+ chop the block of cheese Done
+ fry the block of cheese
+ chop the red apple
+ grill the red apple
+ slice the red onion This is where I need to use the knife on something that represents red onion
+ roast the red onion
+
+I will proceed by using the knife on the red hot pepper treating it as the red onion for now
+
+slice red hot pepper with knife",,"That's not a verb I recognise.
+
+>                                                                                                                                -= Kitchen =-3/30",3,False
+41,slice red apple with knife,,"You need to take the red apple first.
+
+
+>                                                                                                                                -= Kitchen =-3/31",3,False
+42,take red apple,,"You take the red apple from the counter.
+
+
+Your score has just gone up by one point.
+
+>                                                                                                                                -= Kitchen =-4/32",4,False
+43,slice red apple with knife,,"You slice the red apple.
+
+
+                                                      *** You lost! ***
+
+You scored 4 out of a possible 17, in 32 turns.
+
+
+Would you like to RESTART, RESTORE a saved game, QUIT or UNDO the last command?
+>                                                                                                                                 -= Kitchen =-4/32",4,True
