@@ -32,6 +32,10 @@ You’re free to modify or create additional files, as long as they don’t inte
 
 The repository's `custom` agent asks the model for one short plan of at most three subgoals, reuses the existing bounded interaction history, and receives the actual episode step budget. It deliberately excludes summaries, failure ledgers, loop detectors, and self-reflection so that it remains a small step beyond the naive baseline. See [Exercise 2: lightweight planning agent](exercise2_agent.md) for its design rationale, prompt probes, response contract, and matched evaluation command.
 
+### Triggered reflection agent
+
+The separate `reflective` agent extends plan-and-act behaviour with a concise critic call after detected loops or environment failure feedback. It retains one episode-local lesson and three evidence-backed failed attempts. See [Exercise 3: triggered reflection agent](exercise3_agent.md) for its triggers, scope, logging behaviour, and matched BabyAI/TextWorld evaluation command.
+
 
 You can then evaluate the custom agent with:
 ```
