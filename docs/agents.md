@@ -28,9 +28,9 @@ To build a custom agent, you’ll mainly work with:
 You’re free to modify or create additional files, as long as they don’t interfere with evaluation, logging, or environment processes.
 
 
-### Bounded-memory planning agent
+### Lightweight planning agent
 
-The repository's `custom` agent maintains one replaceable summary, one current subgoal plan, a bounded list of failed attempts, and the actual episode step budget. It deliberately avoids replaying the raw observation history or obsolete plans. See [Exercise 2: bounded-memory planning agent](exercise2_agent.md) for its design rationale, naive-baseline evidence, response contract, and matched evaluation command.
+The repository's `custom` agent maintains one short plan of at most three subgoals, reuses the existing bounded interaction history, and receives the actual episode step budget. It deliberately excludes summaries, failure ledgers, loop detectors, and self-reflection so that it remains a small step beyond the naive baseline. See [Exercise 2: lightweight planning agent](exercise2_agent.md) for its design rationale, prompt probes, response contract, and matched evaluation command.
 
 
 You can then evaluate the custom agent with:
