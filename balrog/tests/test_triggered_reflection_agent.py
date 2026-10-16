@@ -2,6 +2,7 @@ from collections import namedtuple
 from types import SimpleNamespace
 
 import balrog.agents as agents_module
+import pytest
 from balrog.agents import AgentFactory
 from balrog.agents.triggered_reflection import TriggeredReflectionAgent
 from balrog.prompt_builder.history import HistoryPromptBuilder
@@ -55,7 +56,7 @@ def test_normal_step_uses_one_actor_call():
     assert response.input_tokens == 2
     assert response.output_tokens == 3
     assert "Step 1 of 80" in client.calls[0][-1].content
-    assert "Recovery reflection:\nNone." in client.calls[0][-1].content
+    assert "Recovery lesson:\nNone." in client.calls[0][-1].content
 
 
 def test_three_identical_observations_trigger_critic_then_actor():
@@ -170,6 +171,182 @@ def test_empty_critic_response_remains_visible_in_reasoning():
     assert response.output_tokens == 6
 
 
+def test_reflection_persists_on_following_step():
+    agent, client = make_agent(
+        "REFLECTION: Going forward did not change the state. Choose another direction.",
+        actor_response("turn left"),
+        actor_response("go forward"),
+    )
+    agent.set_step_context(1)
+    agent.act(observation("Your previous output did not contain a valid action."))
+    agent.set_step_context(2)
+
+    agent.act(observation("a corridor"), prev_action="turn left")
+
+    assert len(client.calls) == 3
+    assert "Recovery lesson:\nGoing forward did not change the state" in client.calls[2][-1].content
+
+
+def test_empty_critic_does_not_erase_existing_lesson():
+    agent, client = make_agent("", actor_response("turn right"))
+    agent.current_lesson = "Do not retry the blocked route."
+    agent.set_step_context(1)
+
+    agent.act(observation("Your previous output did not contain a valid action."))
+
+    assert len(client.calls) == 2
+    assert agent.current_lesson == "Do not retry the blocked route."
+    assert "Recovery lesson:\nDo not retry the blocked route." in client.calls[1][-1].content
+
+
+def test_new_reflection_replaces_existing_lesson():
+    agent, client = make_agent(
+        "REFLECTION: Use the matching key before opening the door.",
+        actor_response("inventory"),
+    )
+    agent.current_lesson = "Try another route."
+    agent.set_step_context(1)
+
+    agent.act(observation("You have to unlock the door first."), prev_action="open door")
+
+    assert agent.current_lesson == "Use the matching key before opening the door."
+    assert "Recovery lesson:\nUse the matching key before opening the door." in client.calls[1][-1].content
+
+
+def test_textworld_semantic_failure_triggers_with_structured_evidence():
+    agent, client = make_agent(
+        "REFLECTION: The object is not visible here. Explore before retrying.",
+        actor_response("look"),
+    )
+    agent.last_observation_signature = "cookery"
+    agent.set_step_context(2)
+
+    response = agent.act(observation("You can't see any such thing."), prev_action="take passkey")
+
+    assert len(client.calls) == 2
+    assert response.completion == "look"
+    assert "explicit failure feedback: you can't" in response.reasoning
+    assert "take passkey -> You can't see any such thing." in client.calls[0][-1].content
+
+
+@pytest.mark.parametrize(
+    "feedback,marker",
+    [
+        ("You have to open the passageway first.", "you have to"),
+        ("That doesn't seem to fit the lock.", "doesn't seem to fit"),
+        ("You can't go that way.", "you can't"),
+    ],
+)
+def test_logged_textworld_failure_phrases_are_detected(feedback, marker):
+    assert TriggeredReflectionAgent._failure_marker(feedback) == marker
+
+
+def test_failure_phrase_in_descriptive_prose_is_not_detected():
+    feedback = "The guide says you have to cross the pantry eventually."
+
+    assert TriggeredReflectionAgent._failure_marker(feedback) is None
+
+
+def test_three_repeated_actions_trigger_reflection_even_when_observation_changes():
+    agent, client = make_agent(
+        actor_response("turn right"),
+        actor_response("turn right"),
+        actor_response("turn right"),
+        "REFLECTION: Repeated turning is cycling orientation. Try movement instead.",
+        actor_response("go forward"),
+    )
+    observations = ("view north", "view east", "view south", "view west")
+    previous_actions = (None, "turn right", "turn right", "turn right")
+
+    for step, (text, previous_action) in enumerate(zip(observations, previous_actions), start=1):
+        agent.set_step_context(step)
+        response = agent.act(observation(text), prev_action=previous_action)
+
+    assert len(client.calls) == 5
+    assert response.completion == "go forward"
+    assert "same action occurred three times" in response.reasoning
+
+
+def test_repeated_forward_actions_do_not_trigger_while_state_changes():
+    agent, client = make_agent(
+        actor_response("go forward"),
+        actor_response("go forward"),
+        actor_response("go forward"),
+        actor_response("go forward"),
+    )
+    observations = ("target 4 steps ahead", "target 3 steps ahead", "target 2 steps ahead", "target 1 step ahead")
+    previous_actions = (None, "go forward", "go forward", "go forward")
+
+    for step, (text, previous_action) in enumerate(zip(observations, previous_actions), start=1):
+        agent.set_step_context(step)
+        response = agent.act(observation(text), prev_action=previous_action)
+
+    assert len(client.calls) == 4
+    assert response.completion == "go forward"
+    assert "TRIGGER:" not in response.reasoning
+
+
+def test_revisited_observation_action_pair_triggers_reflection():
+    agent, client = make_agent(
+        actor_response("go north"),
+        actor_response("go south"),
+        actor_response("go north"),
+        "REFLECTION: This route returns to the same state. Try another exit.",
+        actor_response("go east"),
+    )
+    observations = ("room a", "room b", "room a", "room b")
+    previous_actions = (None, "go north", "go south", "go north")
+
+    for step, (text, previous_action) in enumerate(zip(observations, previous_actions), start=1):
+        agent.set_step_context(step)
+        response = agent.act(observation(text), prev_action=previous_action)
+
+    assert len(client.calls) == 5
+    assert response.completion == "go east"
+    assert "revisited an observation-action pair" in response.reasoning
+    assert list(agent.failed_attempts) == []
+
+
+def test_failed_attempt_memory_keeps_only_three_distinct_entries():
+    agent, _ = make_agent(actor_response())
+
+    for number in range(4):
+        agent._remember_failed_attempt(f"action {number}", f"outcome {number}")
+
+    assert list(agent.failed_attempts) == [
+        ("action 1", "outcome 1"),
+        ("action 2", "outcome 2"),
+        ("action 3", "outcome 3"),
+    ]
+
+
+def test_unchanged_state_records_failure_but_changed_state_does_not():
+    agent, _ = make_agent(actor_response(), actor_response(), actor_response())
+    agent.set_step_context(1)
+    agent.act(observation("room a"))
+    agent.set_step_context(2)
+    agent.act(observation("room b"), prev_action="go north")
+
+    assert list(agent.failed_attempts) == []
+
+    agent.set_step_context(3)
+    agent.act(observation("room b"), prev_action="go east")
+
+    assert list(agent.failed_attempts) == [("go east", "No state change; observation: room b")]
+    assert "go east -> No state change; observation: room b" in agent.client.calls[2][-1].content
+
+
+def test_information_action_is_not_recorded_as_failed_when_state_is_unchanged():
+    agent, _ = make_agent(actor_response(), actor_response())
+    agent.set_step_context(1)
+    agent.act(observation("room a"))
+    agent.set_step_context(2)
+
+    agent.act(observation("room a"), prev_action="look")
+
+    assert list(agent.failed_attempts) == []
+
+
 def test_reset_clears_episode_state():
     agent, _ = make_agent(actor_response())
     agent.plan = "1. Explore"
@@ -177,6 +354,10 @@ def test_reset_clears_episode_state():
     agent.recent_actions.append("go north")
     agent.last_reflection_step = 4
     agent.last_reflection_key = ("trigger", "room")
+    agent.current_lesson = "Try another route."
+    agent.last_observation_signature = "room"
+    agent.recent_attempts.append(("room", "go north"))
+    agent.failed_attempts.append(("go north", "no change"))
 
     agent.reset()
 
@@ -185,6 +366,10 @@ def test_reset_clears_episode_state():
     assert list(agent.recent_actions) == []
     assert agent.last_reflection_step is None
     assert agent.last_reflection_key is None
+    assert agent.current_lesson is None
+    assert agent.last_observation_signature is None
+    assert list(agent.recent_attempts) == []
+    assert list(agent.failed_attempts) == []
     assert agent.episode_step == 0
     assert agent.episode_max_steps is None
 
