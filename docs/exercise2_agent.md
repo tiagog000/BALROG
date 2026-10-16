@@ -2,7 +2,7 @@
 
 ## Design
 
-The Exercise 2 agent maintains one short plan of at most three subgoals, reuses BALROG's bounded interaction history, and receives the actual `Step k of N` budget. It returns a compact `PLAN`/`ACTION` response and deliberately excludes summaries, failure ledgers, loop detectors, forced replanning, and self-reflection.
+The Exercise 2 agent asks the model for one short plan of at most three subgoals, reuses BALROG's bounded interaction history, and receives the actual `Step k of N` budget. It returns a compact `PLAN`/`ACTION` response and deliberately excludes summaries, failure ledgers, loop detectors, forced replanning, and self-reflection.
 
 The research question is whether a small amount of persistent planning and time awareness improves multi-step continuity and reduces repeated or malformed actions relative to the naive agent, without adding the reflective mechanisms intended for Exercise 3.
 
@@ -47,7 +47,7 @@ PLAN:
 ACTION: <one complete valid game command, including every required argument>
 ```
 
-The complete plan must contain no more than three numbered subgoals and the whole response must remain under 80 words. The parser stores the returned plan and extracts only the first labelled action line.
+The prompt requests no more than three numbered subgoals and a response under 80 words; these are instructions to the model rather than extra enforcement code. The parser stores the returned plan, extracts only the first labelled action line, and preserves the raw model response in the trajectory log for error analysis.
 
 ## Scope boundary
 

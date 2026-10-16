@@ -49,7 +49,7 @@ ACTION: <one complete valid game command, including every required argument>
         if plan:
             self.plan = plan
 
-        return response._replace(reasoning=plan or self.plan, completion=action)
+        return response._replace(reasoning=response.completion, completion=action)
 
     @staticmethod
     def _extract_plan_and_action(response_text):

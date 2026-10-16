@@ -50,8 +50,10 @@ def test_custom_agent_reuses_history_and_replaces_the_complete_plan():
 
     assert first.completion == "turn left"
     assert second.completion == "go forward"
-    assert second.reasoning == "1. Pick up the key\n2. Place it by the ball"
-    assert agent.plan == second.reasoning
+    assert second.reasoning == (
+        "PLAN:\n1. Pick up the key\n2. Place it by the ball\nACTION: go forward"
+    )
+    assert agent.plan == "1. Pick up the key\n2. Place it by the ball"
 
     second_prompt = "\n".join(message.content for message in client.calls[1])
     assert "Step 2 of 40" in second_prompt
