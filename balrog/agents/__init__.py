@@ -8,6 +8,7 @@ from .few_shot import FewShotAgent
 from .naive import NaiveAgent
 from .robust_naive import RobustNaiveAgent
 from .robust_cot import RobustCoTAgent
+from .reflective_robust_cot import ReflectiveRobustCoTAgent
 from .triggered_reflection import TriggeredReflectionAgent
 
 
@@ -59,6 +60,8 @@ class AgentFactory:
             return RobustCoTAgent(client_factory, prompt_builder, config=self.config)
         elif self.config.agent.type == "reflective":
             return TriggeredReflectionAgent(client_factory, prompt_builder)
+        elif self.config.agent.type == "reflective_robust_cot":
+            return ReflectiveRobustCoTAgent(client_factory, prompt_builder)
 
         else:
             raise ValueError(f"Unknown agent type: {self.config.agent}")
