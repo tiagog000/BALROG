@@ -8,7 +8,6 @@ class TriggeredReflectionAgent(BaseAgent):
     """Plan normally and request one critique only after observable failure."""
 
     REFLECTION_COOLDOWN_STEPS = 3
-    INFORMATION_ACTIONS = {"goal", "inventory", "look"}
     FAILURE_PATTERNS = (
         ("previous output did not contain a valid action", r"previous output did not contain a valid action"),
         ("not a verb", r"not a verb"),
@@ -60,10 +59,7 @@ class TriggeredReflectionAgent(BaseAgent):
                 self.recent_attempts.append(attempt)
 
                 failure_marker = self._failure_marker(observation)
-                if (
-                    observation_signature == self.last_observation_signature
-                    and not self._is_information_action(action_signature)
-                ):
+                if observation_signature == self.last_observation_signature and repeated_attempt:
                     self._remember_failed_attempt(prev_action, f"No state change; observation: {observation}")
                 elif failure_marker:
                     self._remember_failed_attempt(prev_action, observation)
@@ -187,11 +183,6 @@ ACTION: <one complete valid game command, including every required argument>
         if len(self.recent_observations) == 3 and len(set(self.recent_observations)) == 1:
             return "the same observation occurred three times"
 
-        if len(self.recent_actions) >= 3:
-            last_three_actions = list(self.recent_actions)[-3:]
-            if len(set(last_three_actions)) == 1 and last_three_actions[0] in {"turn left", "turn right"}:
-                return "the same action occurred three times"
-
         if repeated_attempt:
             return "the agent revisited an observation-action pair"
 
@@ -218,29 +209,22 @@ ACTION: <one complete valid game command, including every required argument>
             return "None."
         return "\n".join(f"- {action} -> {outcome}" for action, outcome in self.failed_attempts)
 
-    @classmethod
-    def _failure_marker(cls, observation):
-        for marker, pattern in cls.FAILURE_PATTERNS:
+    def _failure_marker(self, observation):
+        for marker, pattern in self.FAILURE_PATTERNS:
             if re.search(pattern, observation, re.IGNORECASE | re.MULTILINE):
                 return marker
         return None
 
-    @staticmethod
-    def _compact_outcome(outcome):
+    def _compact_outcome(self, outcome):
         compact = re.sub(r"\s+", " ", str(outcome)).strip()
         return compact[:160]
-
-    @classmethod
-    def _is_information_action(cls, action):
-        return action in cls.INFORMATION_ACTIONS or action.startswith("look ")
 
     def _cooldown_complete(self):
         if self.last_reflection_step is None:
             return True
         return self.episode_step - self.last_reflection_step > self.REFLECTION_COOLDOWN_STEPS
 
-    @staticmethod
-    def _observation_text(obs):
+    def _observation_text(self, obs):
         if not isinstance(obs, dict):
             return str(obs)
         text = obs.get("text", {})
@@ -249,18 +233,15 @@ ACTION: <one complete valid game command, including every required argument>
         parts = (text.get("short_term_context", ""), text.get("long_term_context", ""))
         return "\n".join(str(part).strip() for part in parts if part and str(part).strip())
 
-    @staticmethod
-    def _normalise(value):
+    def _normalise(self, value):
         return re.sub(r"\s+", " ", str(value)).strip().lower()
 
-    @staticmethod
-    def _extract_reflection(response_text):
+    def _extract_reflection(self, response_text):
         match = re.search(r"^\s*REFLECTION:\s*(.*)", response_text, re.IGNORECASE | re.DOTALL | re.MULTILINE)
         reflection = match.group(1) if match else response_text
         return " ".join(reflection.split()[:40])
 
-    @staticmethod
-    def _extract_plan_and_action(response_text):
+    def _extract_plan_and_action(self, response_text):
         plan_match = re.search(
             r"^\s*PLAN:\s*(.*?)(?=^\s*ACTION:|\Z)",
             response_text,

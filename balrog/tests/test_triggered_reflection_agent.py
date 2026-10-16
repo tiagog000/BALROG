@@ -238,22 +238,24 @@ def test_textworld_semantic_failure_triggers_with_structured_evidence():
     ],
 )
 def test_logged_textworld_failure_phrases_are_detected(feedback, marker):
-    assert TriggeredReflectionAgent._failure_marker(feedback) == marker
+    agent, _ = make_agent(actor_response())
+
+    assert agent._failure_marker(feedback) == marker
 
 
 def test_failure_phrase_in_descriptive_prose_is_not_detected():
+    agent, _ = make_agent(actor_response())
     feedback = "The guide says you have to cross the pantry eventually."
 
-    assert TriggeredReflectionAgent._failure_marker(feedback) is None
+    assert agent._failure_marker(feedback) is None
 
 
-def test_three_repeated_actions_trigger_reflection_even_when_observation_changes():
+def test_repeated_actions_alone_do_not_trigger_while_observation_changes():
     agent, client = make_agent(
         actor_response("turn right"),
         actor_response("turn right"),
         actor_response("turn right"),
-        "REFLECTION: Repeated turning is cycling orientation. Try movement instead.",
-        actor_response("go forward"),
+        actor_response("turn right"),
     )
     observations = ("view north", "view east", "view south", "view west")
     previous_actions = (None, "turn right", "turn right", "turn right")
@@ -262,9 +264,9 @@ def test_three_repeated_actions_trigger_reflection_even_when_observation_changes
         agent.set_step_context(step)
         response = agent.act(observation(text), prev_action=previous_action)
 
-    assert len(client.calls) == 5
-    assert response.completion == "go forward"
-    assert "same action occurred three times" in response.reasoning
+    assert len(client.calls) == 4
+    assert response.completion == "turn right"
+    assert "TRIGGER:" not in response.reasoning
 
 
 def test_repeated_forward_actions_do_not_trigger_while_state_changes():
@@ -321,7 +323,13 @@ def test_failed_attempt_memory_keeps_only_three_distinct_entries():
 
 
 def test_unchanged_state_records_failure_but_changed_state_does_not():
-    agent, _ = make_agent(actor_response(), actor_response(), actor_response())
+    agent, _ = make_agent(
+        actor_response(),
+        actor_response(),
+        actor_response(),
+        "REFLECTION: Repeating east does not change the state. Choose another action.",
+        actor_response("turn left"),
+    )
     agent.set_step_context(1)
     agent.act(observation("room a"))
     agent.set_step_context(2)
@@ -332,8 +340,13 @@ def test_unchanged_state_records_failure_but_changed_state_does_not():
     agent.set_step_context(3)
     agent.act(observation("room b"), prev_action="go east")
 
+    assert list(agent.failed_attempts) == []
+
+    agent.set_step_context(4)
+    agent.act(observation("room b"), prev_action="go east")
+
     assert list(agent.failed_attempts) == [("go east", "No state change; observation: room b")]
-    assert "go east -> No state change; observation: room b" in agent.client.calls[2][-1].content
+    assert "go east -> No state change; observation: room b" in agent.client.calls[3][-1].content
 
 
 def test_information_action_is_not_recorded_as_failed_when_state_is_unchanged():
@@ -375,7 +388,8 @@ def test_reset_clears_episode_state():
 
 
 def test_parser_keeps_only_first_action_line():
-    plan, action = TriggeredReflectionAgent._extract_plan_and_action(
+    agent, _ = make_agent(actor_response())
+    plan, action = agent._extract_plan_and_action(
         "PLAN:\n1. Search south\nACTION: go south\nThis should avoid the loop."
     )
 

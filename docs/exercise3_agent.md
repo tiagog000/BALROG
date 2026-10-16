@@ -11,14 +11,13 @@ The research question is whether a targeted critique improves recovery from loop
 On an ordinary step, the agent makes one actor call and returns a `PLAN`/`ACTION` response. It requests a critic call before the actor only when one of these triggers fires:
 
 1. the same normalized observation has occurred three times;
-2. the same BabyAI turning action has occurred three times;
-3. an observation/action pair is revisited;
-4. the previous four actions form an `A-B-A-B` oscillation; or
-5. the environment reports an invalid or semantically unsuccessful command, including TextWorld feedback such as “not a verb,” “you can't,” “you have to,” or “doesn't seem to fit.”
+2. an observation/action pair is revisited;
+3. the previous four actions form an `A-B-A-B` oscillation; or
+4. the environment reports an invalid or semantically unsuccessful command, including TextWorld feedback such as “not a verb,” “you can't,” “you have to,” or “doesn't seem to fit.”
 
-The critic must identify one mistaken assumption or ineffective strategy and one specific change, without selecting the next action. The latest non-empty lesson persists for the rest of the episode or until a later critique replaces it. The agent also keeps at most three evidence-backed failed attempts as `action -> outcome`; these are recorded after unchanged state or explicit failure feedback. Read-only TextWorld actions (`look`, `inventory`, and `goal`) are not treated as failures merely because the room description is unchanged.
+The critic must identify one mistaken assumption or ineffective strategy and one specific change, without selecting the next action. The latest non-empty lesson persists for the rest of the episode or until a later critique replaces it. The agent also keeps at most three evidence-backed failed attempts as `action -> outcome`; these are recorded after explicit failure feedback or after the same action is retried from the same state without changing the observation.
 
-The actor sees the current plan, retained lesson, and failed attempts before choosing an action. A reflected state is suppressed until the observation changes, and a short cooldown prevents rapid repeated critiques. Repeated forward movement is not itself a trigger while observations continue to show progress.
+The actor sees the current plan, retained lesson, and failed attempts before choosing an action. A reflected state is suppressed until the observation changes, and a short cooldown prevents rapid repeated critiques. Repeated actions are not themselves failures while observations continue to show progress; detection is based on state/action evidence rather than hard-coded action names.
 
 ## Prompt contracts
 
