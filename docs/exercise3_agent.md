@@ -45,13 +45,64 @@ Both raw model responses are retained in the trajectory reasoning field on refle
 - Python detects symptoms but does not prescribe a puzzle action. The language model diagnoses the failure and chooses the recovery.
 - The implementation is limited to mechanisms relevant to BabyAI and TextWorld, although it does not hardcode task solutions for either environment.
 
+## Hybrid variant: Reflective Robust CoT
+
+The optional `reflective_robust_cot` agent keeps the reflection state machine above but replaces the normal actor contract with Robust CoT's strict action delimiters. It is deliberately implemented as a thin subclass so the original `reflective` and `robust_cot` agents remain unchanged comparison points.
+
+```mermaid
+flowchart TD
+    O[Observation] --> E[Update plan and failure evidence]
+    E --> T{Failure trigger?}
+    T -->|No| A[Robust CoT actor]
+    T -->|Yes| C[Critic produces one lesson]
+    C --> A
+    A --> P[Predict immediate effect]
+    P --> X[Extract text inside strict action tags]
+    X --> O
+```
+
+On normal steps the hybrid makes one model call. On triggered steps it calls the critic once and then the same Robust CoT actor. The actor sees `Step k of N`, the current plan, the retained lesson, and at most three failed attempts. Free-form reasoning remains in the trajectory log, while only the command inside `<|ACTION|>...<|END|>` reaches the environment. Missing delimiters yield an empty action so BALROG's existing invalid-action feedback handles the failure safely.
+
+Select the hybrid with:
+
+```text
+agent.type=reflective_robust_cot
+```
+
+### Stage 2 smoke run
+
+This command runs one episode from each configured BabyAI and TextWorld task. It is an integration check, not enough evidence for a performance claim:
+
+```bash
+OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES .venv/bin/python eval.py \
+  agent.type=reflective_robust_cot \
+  agent.max_image_history=0 \
+  agent.max_text_history=16 \
+  envs.names=babyai-textworld \
+  envs.env_kwargs.seed=1001 \
+  eval.num_workers=4 \
+  eval.max_steps_per_episode=null \
+  eval.save_images=false \
+  eval.num_episodes.babyai=1 \
+  eval.num_episodes.textworld=1 \
+  eval.feedback_on_invalid_action=true \
+  eval.output_dir=results/stage2-1001_gemma4_reflective_robust_cot \
+  client.client_name=vllm \
+  client.model_id=gemma-4-e4b-it-mlx \
+  client.base_url=http://127.0.0.1:1234/v1 \
+  client.generate_kwargs.temperature=0.7 \
+  client.generate_kwargs.max_tokens=2048 \
+  client.timeout=120 \
+  client.max_retries=2
+```
+
 ## Matched local evaluation
 
 Run the same local model, generation settings, episode counts, and seeds used for Exercise 2. Use a distinct output directory for each seed:
 
 ```bash
 for seed in 1001 1002 1003; do
-  .venv/bin/python eval.py \
+  OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES .venv/bin/python eval.py \
     agent.type=reflective \
     envs.names=babyai-textworld \
     envs.env_kwargs.seed=$seed \
