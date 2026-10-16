@@ -29,18 +29,18 @@ def make_agent(*completions):
     return agent, client
 
 
-def observation(text, mission="put the blue key next to the red ball"):
+def observation(text):
     return {
-        "mission": mission,
+        "mission": "put the blue key next to the red ball",
         "text": {"long_term_context": text, "short_term_context": ""},
         "image": None,
     }
 
 
-def test_custom_agent_replaces_summary_and_does_not_replay_raw_history():
+def test_custom_agent_reuses_history_and_replaces_the_complete_plan():
     agent, client = make_agent(
-        "SUMMARY: first compact summary\nPLAN: 1. Find key\n2. Pick it up\nACTION: turn left",
-        "SUMMARY: second compact summary\nPLAN: No changes to the plan.\nACTION: go forward",
+        "PLAN:\n1. Find the key\n2. Pick it up\nACTION: turn left",
+        "PLAN:\n1. Pick up the key\n2. Place it by the ball\nACTION: go forward",
     )
 
     agent.set_step_context(1)
@@ -50,55 +50,42 @@ def test_custom_agent_replaces_summary_and_does_not_replay_raw_history():
 
     assert first.completion == "turn left"
     assert second.completion == "go forward"
-    assert agent.latest_summary == "second compact summary"
-    assert agent.plan == "1. Find key\n2. Pick it up"
+    assert second.reasoning == "1. Pick up the key\n2. Place it by the ball"
+    assert agent.plan == second.reasoning
 
-    second_prompt = client.calls[1][-1].content
+    second_prompt = "\n".join(message.content for message in client.calls[1])
     assert "Step 2 of 40" in second_prompt
-    assert "first compact summary" in second_prompt
+    assert "1. Find the key\n2. Pick it up" in second_prompt
+    assert "OLD_OBSERVATION_MARKER" in second_prompt
     assert "NEW_OBSERVATION_MARKER" in second_prompt
-    assert "OLD_OBSERVATION_MARKER" not in second_prompt
-    assert len(client.calls[1]) == 2
+    assert "at most three numbered subgoals" in second_prompt
+    assert "under 80 words" in second_prompt
 
 
-def test_custom_agent_records_an_unchanged_observation_as_failed_attempt():
-    agent, client = make_agent(
-        "SUMMARY: at a wall\nPLAN: Find another route\nACTION: go forward",
-        "SUMMARY: still at a wall\nPLAN: Turn away\nACTION: turn left",
-    )
-
-    agent.set_step_context(1)
-    first = agent.act(observation("a wall 1 step forward"))
-    agent.set_step_context(2)
-    agent.act(observation("a wall 1 step forward"), prev_action=first.completion)
-
-    assert list(agent.failed_attempts) == ["'go forward' left the visible observation unchanged"]
-    assert "'go forward' left the visible observation unchanged" in client.calls[1][-1].content
-
-
-def test_reset_clears_all_episode_memory():
-    agent, _ = make_agent("SUMMARY: state\nPLAN: a plan\nACTION: look")
+def test_reset_clears_plan_history_and_step_context():
+    agent, _ = make_agent("PLAN:\n1. Explore north\nACTION: go north")
     agent.set_step_context(3)
-    agent.act(observation("room"))
-    agent.failed_attempts.append("failed route")
+    agent.act(observation("a room"))
 
     agent.reset()
 
     assert agent.plan is None
-    assert agent.latest_summary is None
-    assert agent.objective is None
-    assert list(agent.failed_attempts) == []
     assert agent.episode_step == 0
     assert agent.episode_max_steps is None
+    assert [message.content for message in agent.prompt_builder.get_prompt()] == ["Task instructions"]
 
 
-def test_extract_sections_accepts_labelled_and_tagged_actions():
-    summary, plan, action = CustomAgent._extract_sections(
-        "SUMMARY: current state\nPLAN: explore north\nACTION: go north\nextra explanation"
+def test_parser_keeps_only_the_first_action_line():
+    plan, action = CustomAgent._extract_plan_and_action(
+        "PLAN:\n1. Explore north\n2. Take the coin\nACTION: go north\nThis exit is unexplored."
     )
-    assert (summary, plan, action) == ("current state", "explore north", "go north")
 
-    summary, plan, action = CustomAgent._extract_sections("reasoning\n<|ACTION|>take coin<|END|>")
-    assert summary is None
+    assert plan == "1. Explore north\n2. Take the coin"
+    assert action == "go north"
+
+
+def test_parser_fails_safe_when_labels_are_missing():
+    plan, action = CustomAgent._extract_plan_and_action("I think going north is best.")
+
     assert plan is None
-    assert action == "take coin"
+    assert action == ""
