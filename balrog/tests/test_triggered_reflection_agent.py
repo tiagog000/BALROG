@@ -1,5 +1,8 @@
 from collections import namedtuple
+from types import SimpleNamespace
 
+import balrog.agents as agents_module
+from balrog.agents import AgentFactory
 from balrog.agents.triggered_reflection import TriggeredReflectionAgent
 from balrog.prompt_builder.history import HistoryPromptBuilder
 
@@ -193,3 +196,18 @@ def test_parser_keeps_only_first_action_line():
 
     assert plan == "1. Search south"
     assert action == "go south"
+
+
+def test_factory_creates_reflective_agent(monkeypatch):
+    client = FakeClient([actor_response()])
+    prompt_builder = HistoryPromptBuilder(max_text_history=16, max_image_history=0)
+    config = SimpleNamespace(
+        client=SimpleNamespace(),
+        agent=SimpleNamespace(type="reflective"),
+    )
+    monkeypatch.setattr(agents_module, "create_llm_client", lambda _: lambda: client)
+    monkeypatch.setattr(agents_module, "create_prompt_builder", lambda _: prompt_builder)
+
+    agent = AgentFactory(config).create_agent()
+
+    assert isinstance(agent, TriggeredReflectionAgent)
